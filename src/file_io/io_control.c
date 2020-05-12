@@ -53,6 +53,12 @@ static void config_check()
 	config[31] = isinf(config[31]) ? 0 : config[31];
 	// v_fix
 	config[61] = isinf(config[61]) ? 0 : config[61];
+    
+	if (isinf(config[21]))
+		{
+			if (dim == 1)
+				config[21] = 0.0;
+        }
 }
 
 

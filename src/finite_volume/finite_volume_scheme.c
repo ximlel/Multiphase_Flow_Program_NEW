@@ -42,14 +42,17 @@ void finite_volume_scheme(struct flu_var * FV, const struct mesh_var * mv, const
 	const double delta_plot_t = 0.05;
 	double plot_t = 0.0;
 
-	int k, j, ivi, stop_step = 0, stop_t = 0;
+	int k, j, ivi, stop_step = 0, stop_t = 0;	
+	const int N_phase = (int)config[21];
+	double phase_locate[N_phase], phase_locate_init[N_phase], phase_locate_relative[N_phase];
+	
 	for(int i = 0; i < (int)config[5] && stop_step == 0; ++i)
 		{
 			if (t_all >= plot_t)
 				{				
 					file_write_TEC(*FV, *mv, problem, plot_t, dim);
 					plot_t += delta_plot_t;
-				}			
+				}
 			  			
 			start_clock = clock();
 
@@ -67,8 +70,13 @@ void finite_volume_scheme(struct flu_var * FV, const struct mesh_var * mv, const
 			if (mv->bc != NULL)
 				mv->bc(&cv, *mv, FV, t_all);
 
-			tau = tau_calc(&cv, mv);				
+			for (k==0; k<N_phase; k++)
+			    {
+				phase_locate_init[k] = 0.1+0.001*k;			    
+				phase_locate[k] = phase_locate_init[k];
+			    }
 
+			tau = tau_calc(&cv, mv);
 			t_all += tau;
 			if(tau < eps)
 				{
@@ -106,6 +114,8 @@ void finite_volume_scheme(struct flu_var * FV, const struct mesh_var * mv, const
 											ifv     = ifv_R;
 											ifv_R   = ifv_tmp;
 										}
+                                    for (k==0; k<N_phase; k++)	    
+                                        phase_locate_relative[k] = phase_locate_init[k]-ifv.locate;
 
 									if (order == 1)
 										{
@@ -127,6 +137,13 @@ void finite_volume_scheme(struct flu_var * FV, const struct mesh_var * mv, const
 												GRP_scheme(&ifv, &ifv_R, tau);
 											else if(strcmp(scheme,"GRP_2D") == 0)
 												GRP_2D_scheme(&ifv, &ifv_R, tau);
+											else if(strcmp(scheme,"GRP_IT") == 0)										    
+                                            {
+                                                if (cv.n_x[k][j] > 0.0)
+                                                    GRP_IT_scheme(&ifv, &ifv_R, tau, phase_locate_relative, phase_locate);
+                                                else
+                                                    GRP_scheme(&ifv, &ifv_R, tau);
+                                            }
 											else
 												{
 													printf("No Riemann solver!\n");

@@ -263,7 +263,10 @@ int interface_var_init(const struct cell_var * cv, const struct mesh_var * mv,
 	if (order == 2)
 		{
 			if (dim == 1)
+            {   
+                ifv->locate = mv->X[p_n];
 				ifv->delta_x = mv->X[p_n] - cv->X_c[k];
+            }
 			else if (dim == 2)
 				{					
 					ifv->delta_x = 0.5*(mv->X[p_p] + mv->X[p_n]) - cv->X_c[k];

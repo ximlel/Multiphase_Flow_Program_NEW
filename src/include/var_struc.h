@@ -62,6 +62,7 @@ struct i_f_var {
 	double RHO_minus_c, P_minus_c, U_qt_minus_c, V_qt_minus_c, gamma_minus_c;
 	double RHO_add_c,   P_add_c,   U_qt_add_c,   V_qt_add_c,   gamma_add_c;
 	double u_star, u_minus_c, u_add_c;
+    double locate;
 };
 
 //mesh

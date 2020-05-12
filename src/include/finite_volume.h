@@ -34,6 +34,6 @@ void HLL_scheme(struct i_f_var * ifv, struct i_f_var * ifv_R);
 void Riemann_exact_scheme(struct i_f_var * ifv, struct i_f_var * ifv_R);
 void GRP_scheme(struct i_f_var * ifv, struct i_f_var * ifv_R, const double tau);
 void GRP_2D_scheme(struct i_f_var * ifv, struct i_f_var * ifv_R, const double tau);
-
+void GRP_IT_scheme(struct i_f_var * ifv, struct i_f_var * ifv_R, const double tau, double * phase_loc_rel, double * phase_loc);
 
 void finite_volume_scheme(struct flu_var * FV, const struct mesh_var * mv, const char * scheme, const char * problem);
