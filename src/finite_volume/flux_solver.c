@@ -305,12 +305,12 @@ static double tau_down_cal(double A, double B, double C, double tau)
 	    fprintf(stderr,"Delta in 2-o eq < 0!\n");
 	}
         if (A > 0.0) {	
-	tau_down  = (-B-sqrt(Delta))/2.0/A;
-	tau_down2 = (-B+sqrt(Delta))/2.0/A;
+	tau_down  = (-B+sqrt(Delta))/2.0/A;
+	tau_down2 = (-B-sqrt(Delta))/2.0/A;
 	}
 	else {
-	    tau_down  = (-B+sqrt(Delta))/2.0/A;
-	    tau_down2 = (-B-sqrt(Delta))/2.0/A;
+	    tau_down  = (-B-sqrt(Delta))/2.0/A;
+	    tau_down2 = (-B+sqrt(Delta))/2.0/A;
 	}
 	if (tau_down < 0.0 || tau_down > tau)
 	    tau_down = tau_down2;
