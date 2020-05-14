@@ -36,6 +36,6 @@ void linear_GRP_solver_Edir_Q1D_IT
  const double   p_L, const double   p_R, const double   d_p_L, const double   d_p_R, const double   t_p_L, const double   t_p_R,
  const double   z_L, const double   z_R, const double   d_z_L, const double   d_z_R, const double   t_z_L, const double   t_z_R,
  const double phi_L, const double phi_R, const double d_phi_L, const double d_phi_R, const double t_phi_L, const double t_phi_R,
- const double gammaL, const double gammaR, const double  eps, const double  atc, int * CRW);
+ const double gammaL, const double gammaR, const double  eps, const double  atc, int * CRW, double *D_x);
 
 #endif

@@ -292,6 +292,34 @@ void GRP_2D_scheme(struct i_f_var * ifv, struct i_f_var * ifv_R, const double ta
 	ifv->PHI = mid[5] + tau*dire[5];
 }
 
+static double tau_down_cal(double A, double B, double C, double tau) 
+{
+    const double eps = config[4];
+    double Delta, tau_down, tau_down2;
+    Delta = B*B - 4*A*C;
+    if (fabs(A) < eps)
+	tau_down = -C/B;
+    else {
+	if (Delta <= 0.0) {
+	    Delta = 0.0;
+	    fprintf(stderr,"Delta in 2-o eq < 0!\n");
+	}
+        if (A > 0.0) {	
+	tau_down  = (-B-sqrt(Delta))/2.0/A;
+	tau_down2 = (-B+sqrt(Delta))/2.0/A;
+	}
+	else {
+	    tau_down  = (-B+sqrt(Delta))/2.0/A;
+	    tau_down2 = (-B-sqrt(Delta))/2.0/A;
+	}
+	if (tau_down < 0.0 || tau_down > tau)
+	    tau_down = tau_down2;
+	if (tau_down < 0.0 || tau_down > tau)
+	    fprintf(stderr,"tau_down not_in [0,tau]!\n");    
+    }
+    return tau_down;
+}
+
 void GRP_IT_scheme(struct i_f_var * ifv, struct i_f_var * ifv_R, const double tau, double *phase_loc_rel, double *phase_loc)
 {
 	const int dim = (int)config[0];
@@ -323,12 +351,16 @@ void GRP_IT_scheme(struct i_f_var * ifv, struct i_f_var * ifv_R, const double ta
 	double wave_speed[2], dire[6], mid[6], star[6];
 	double gamma = ifv->gamma;
 	double gamma_mid,z_a_mid;
-
 	double rho_mid, p_mid, u_mid, v_mid, phi_mid, mid_qt;
+
 	double c_L, c_R;
 	double rho_star_L, rho_star_R, p_star;
 	double rho_c, u_c, p_c, phi_c; // t_n
-	double rho_c_nt, u_c_nt, p_c_nt, phi_c_nt; // t_{n+1}
+	double rho_c_nt, u_c_nt, p_c_nt, d_u_nt; // t_{n+1}
+	double u_s_down;
+	double tau_down, A_two, B_two, C_two;
+    double D_x[6];
+	double d_wave_speed[2] = {0.0}, shock_speed;
 	double s_x = config[10];
 	int CRW[2];
 	if (dim == 1)
@@ -384,17 +416,33 @@ void GRP_IT_scheme(struct i_f_var * ifv, struct i_f_var * ifv_R, const double ta
 			    phase_loc_rel[k] = (phase_loc_rel[k]-0.5*(u_c_nt+u_R)*tau)/(1.0+0.5*d_u_R*tau);
 			}
 			else {
-			    linear_GRP_solver_Edir_Q1D_IT(wave_speed, dire, mid, star, phase_loc_rel[k]/tau, 0.0, ifv->RHO, ifv_R->RHO, ifv->d_rho, ifv_R->d_rho, -0.0, -0.0, u, u_R, d_u, d_u_R, -0.0, -0.0, 0.0, 0.0, -0.0, -0.0, -0.0, -0.0, ifv->P, ifv_R->P, ifv->d_p, ifv_R->d_p, -0.0, -0.0, 0.0, 0.0, -0.0, -0.0, -0.0, -0.0, ifv->PHI, ifv_R->PHI, ifv->d_phi, ifv_R->d_phi, -0.0, -0.0, ifv->gamma, ifv_R->gamma, eps, eps, CRW);
-			    u_c_nt = mid[1] + tau*dire[1];
+			    linear_GRP_solver_Edir_Q1D_IT(wave_speed, dire, mid, star, phase_loc_rel[k]/tau, 0.0, ifv->RHO, ifv_R->RHO, ifv->d_rho, ifv_R->d_rho, -0.0, -0.0, u, u_R, d_u, d_u_R, -0.0, -0.0, 0.0, 0.0, -0.0, -0.0, -0.0, -0.0, ifv->P, ifv_R->P, ifv->d_p, ifv_R->d_p, -0.0, -0.0, 0.0, 0.0, -0.0, -0.0, -0.0, -0.0, ifv->PHI, ifv_R->PHI, ifv->d_phi, ifv_R->d_phi, -0.0, -0.0, ifv->gamma, ifv_R->gamma, eps, eps, CRW, D_x);
+			    rho_c_nt = mid[0] + tau*dire[0];
+			    u_c_nt   = mid[1] + tau*dire[1];
+			    p_c_nt   = mid[3] + tau*dire[3];
 			    if (phase_loc_rel[k]/tau < ifv->u_star && CRW[0])
 				phase_loc_rel[k] = (phase_loc_rel[k]-0.5*(u_c_nt+u)*tau)/(1.0+0.5*d_u*tau);	
 			    else if (phase_loc_rel[k]/tau >= ifv->u_star && CRW[1])
 				phase_loc_rel[k] = (phase_loc_rel[k]-0.5*(u_c_nt+u_R)*tau)/(1.0+0.5*d_u_R*tau);	
 			    else if (phase_loc_rel[k]/tau < ifv->u_star) {
-				
+				A_two = 0.5*(d_u_nt - d_wave_speed[0]);
+				B_two = -d_u_nt + u_c_nt - wave_speed[0];
+				C_two = phase_loc_rel[k] - u_c_nt + 0.5*d_u_nt;
+				tau_down = tau_down_cal(A_two,B_two,C_two,tau);
+				shock_speed = wave_speed[0] + d_wave_speed[0]*tau_down;
+				linear_GRP_solver_Edir_Q1D_IT(wave_speed, dire, mid, star, wave_speed[0]-eps, 0.0, ifv->RHO, ifv_R->RHO, ifv->d_rho, ifv_R->d_rho, -0.0, -0.0, u, u_R, d_u, d_u_R, -0.0, -0.0, 0.0, 0.0, -0.0, -0.0, -0.0, -0.0, ifv->P, ifv_R->P, ifv->d_p, ifv_R->d_p, -0.0, -0.0, 0.0, 0.0, -0.0, -0.0, -0.0, -0.0, ifv->PHI, ifv_R->PHI, ifv->d_phi, ifv_R->d_phi, -0.0, -0.0, ifv->gamma, ifv_R->gamma, eps, eps, CRW, D_x);
+				u_s_down = mid[0] + tau_down*dire[1];
+				phase_loc_rel[k] = (phase_loc_rel[k]-0.5*(u_c_down+u)*tau_down)/(1.0+0.5*d_u*tau_down);
 			    }
-			    else if (phase_loc_rel[k]/tau >= ifv->u_star && CRW[1]) {
-				
+			    else { // if (phase_loc_rel[k]/tau >= ifv->u_star)
+				A_two = 0.5*(d_u_nt - d_wave_speed[1]);
+				B_two = -d_u_nt + u_c_nt - wave_speed[1];
+				C_two = phase_loc_rel[k] - u_c_nt + 0.5*d_u_nt;
+				tau_down = tau_down_cal(A_two,B_two,C_two,tau);				
+				shock_speed = wave_speed[1] + d_wave_speed[1]*tau_down;
+				linear_GRP_solver_Edir_Q1D_IT(wave_speed, dire, mid, star, wave_speed[1]+eps, 0.0, ifv->RHO, ifv_R->RHO, ifv->d_rho, ifv_R->d_rho, -0.0, -0.0, u, u_R, d_u, d_u_R, -0.0, -0.0, 0.0, 0.0, -0.0, -0.0, -0.0, -0.0, ifv->P, ifv_R->P, ifv->d_p, ifv_R->d_p, -0.0, -0.0, 0.0, 0.0, -0.0, -0.0, -0.0, -0.0, ifv->PHI, ifv_R->PHI, ifv->d_phi, ifv_R->d_phi, -0.0, -0.0, ifv->gamma, ifv_R->gamma, eps, eps, CRW, D_x);
+				u_s_down = mid[0] + tau_down*dire[1];
+				phase_loc_rel[k] = (phase_loc_rel[k]-0.5*(u_c_down+u_R)*tau_down)/(1.0+0.5*d_u_R*tau_down);
 			    }				
 			}
 			phase_loc[k] = phase_loc_rel[k] + ifv->locate;

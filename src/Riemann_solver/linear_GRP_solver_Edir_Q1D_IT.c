@@ -19,7 +19,7 @@ void linear_GRP_solver_Edir_Q1D_IT
  const double   p_L, const double   p_R, const double   d_p_L, const double   d_p_R, const double   t_p_L, const double   t_p_R,
  const double   z_L, const double   z_R, const double   d_z_L, const double   d_z_R, const double   t_z_L, const double   t_z_R,
  const double phi_L, const double phi_R, const double d_phi_L, const double d_phi_R, const double t_phi_L, const double t_phi_R,
- const double gammaL, const double gammaR, const double  eps, const double  atc, int * CRW)
+ const double gammaL, const double gammaR, const double  eps, const double  atc, int * CRW, double *D_x)
 {
     CRW[0]=0;
     CRW[1]=0;
@@ -108,6 +108,9 @@ void linear_GRP_solver_Edir_Q1D_IT
 					D[3] = -(u_L-lambda_u)*d_p_L   - (v_L-lambda_v)*t_p_L   - rho_L*c_L*c_L*(d_u_L+t_v_L) ;
 					D[4] = -(u_L-lambda_u)*d_z_L   - (v_L-lambda_v)*t_z_L;
 					D[5] = -(u_L-lambda_u)*d_phi_L - (v_L-lambda_v)*t_phi_L;
+                    D_x[0] = d_rho_L;
+                    D_x[1] = d_u_L;
+                    D_x[3] = d_p_L;
 				}
 			else if(speed_R < lambda_u) //the direction is on the right side of all the three waves
 				{
@@ -123,6 +126,9 @@ void linear_GRP_solver_Edir_Q1D_IT
 					D[3] = -(u_R-lambda_u)*d_p_R   - (v_R-lambda_v)*t_p_R   - rho_R*c_R*c_R*(d_u_R+t_v_R);
 					D[4] = -(u_R-lambda_u)*d_z_R   - (v_R-lambda_v)*t_z_R;
 					D[5] = -(u_R-lambda_u)*d_phi_R - (v_R-lambda_v)*t_phi_R;
+                    D_x[0] = d_rho_R;
+                    D_x[1] = d_u_R;
+                    D_x[3] = d_p_R;
 				}
 			else
 				{
@@ -199,6 +205,9 @@ void linear_GRP_solver_Edir_Q1D_IT
 					D[3] = -(U[1]-lambda_u)*D_p   - (U[2]-lambda_v)*T_p   - U[0]*C*C*(D_u+T_v);
 					D[4] = -(U[1]-lambda_u)*D_z   - (U[2]-lambda_v)*T_z;
 					D[5] = -(U[1]-lambda_u)*D_phi - (U[2]-lambda_v)*T_phi;	
+                    D_x[0] = D_rho;
+                    D_x[1] = D_u;
+                    D_x[3] = D_p;
 				}				
 			U_star[0] = rho_star_L;
 			U_star[1] = u_star;
@@ -255,6 +264,9 @@ void linear_GRP_solver_Edir_Q1D_IT
 			D[3] = -(u_L-lambda_u)*d_p_L   - (v_L-lambda_v)*t_p_L   - rho_L*c_L*c_L*(d_u_L+t_v_L) ;
 			D[4] = -(u_L-lambda_u)*d_z_L   - (v_L-lambda_v)*t_z_L;
 			D[5] = -(u_L-lambda_u)*d_phi_L - (v_L-lambda_v)*t_phi_L;
+            D_x[0] = d_rho_L;
+            D_x[1] = d_u_L;
+            D_x[3] = d_p_L;
 		}
 	else if(speed_R < lambda_u) //the direction is on the right side of all the three waves
 		{
@@ -270,7 +282,10 @@ void linear_GRP_solver_Edir_Q1D_IT
 			D[3] = -(u_R-lambda_u)*d_p_R   - (v_R-lambda_v)*t_p_R   - rho_R*c_R*c_R*(d_u_R+t_v_R);
 			D[4] = -(u_R-lambda_u)*d_z_R   - (v_R-lambda_v)*t_z_R;
 			D[5] = -(u_R-lambda_u)*d_phi_R - (v_R-lambda_v)*t_phi_R;
-		}
+            D_x[0] = d_rho_R;
+            D_x[1] = d_u_R;
+            D_x[3] = d_p_R;
+        }
 	else//----non-trivial case----
 		{
 			if(CRW[0] && ((u_star-c_star_L) > lambda_u)) // the direction is in a 1-CRW
@@ -418,7 +433,8 @@ void linear_GRP_solver_Edir_Q1D_IT
 					//already total D!
 					D[1] = u_t_mat + (u_star-lambda_u)/U[0]/C/C * p_t_mat;
 					D[3] = p_t_mat + (u_star-lambda_u)*U[0] * u_t_mat;
-	
+                    D_x[1] = p_t_mat/U[0]/C/C;
+                    D_x[3] = u_t_mat*U[0];
 					if(u_star < lambda_u) //the direction is between the contact discontinuety and the 3-wave
 						{
 							if(CRW[1]) //the 3-wave is a CRW
@@ -461,6 +477,7 @@ void linear_GRP_solver_Edir_Q1D_IT
 									D[4] = D[4] + lambda_u*d_z_R;
 									D[5] = -U[1] * SmUR * d_phi_R / SmUs;
 									D[5] = D[5] + lambda_u*d_phi_R;
+                                    D_x[0] = rho_x;
 								}
 						}
 					else //the direction is between the 1-wave and the contact discontinuety
@@ -506,6 +523,7 @@ void linear_GRP_solver_Edir_Q1D_IT
 									D[4] = D[4] + lambda_u*d_z_L;
 									D[5] = -U[1] * SmUL * d_phi_L / SmUs;
 									D[5] = D[5] + lambda_u*d_phi_L;
+                                    D_x[0] = rho_x;
 								}
 						}
 					//--end of non-sonic case--
